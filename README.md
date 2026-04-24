@@ -74,7 +74,7 @@ Install the Android and iOS packages, then add the platforms to your project.
 *(Note: iOS compilation requires a Mac with Xcode, Android requires Android Studio).*
 
 ```bash
-npm install @capacitor/android @capacitor/ios
+npm npxinstall @capacitor/android @capacitor/ios
 npx cap add android
 npx cap add ios
 ```
