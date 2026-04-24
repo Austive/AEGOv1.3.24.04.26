@@ -1,20 +1,98 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
+# Aego Platform
 
-# Run and deploy your AI Studio app
+Aego is an innovative e-hailing platform designed for low-cost, short-term security solutions in Durban, South Africa. It connects clients who need temporary security (close protection, event security, asset protection) with registered security companies and their personnel.
 
-This contains everything you need to run your app locally.
+## Features
 
-View your app in AI Studio: https://ai.studio/apps/3e2d0fff-bcfc-4e58-9774-0227c3f4d325
+* **Role-Based Workflows**: Separate, tailored dashboards and capabilities for Clients, Companies, Security Personnel, and Admins.
+* **Real-Time Booking**: On-demand e-hailing style matching for security services.
+* **Secure Authentication & Database**: Powered by Firebase Auth and Firestore with robust, hardened security rules.
+* **Notifications & Chat**: Real-time updates and secure messaging between stakeholders.
+* **End-to-End Testing**: Protected by Playwright E2E tests validating critical user flows.
 
-## Run Locally
+## Local Installation & Setup
 
-**Prerequisites:**  Node.js
+### Prerequisites
+* [Node.js](https://nodejs.org/) (v18 or higher recommended)
+* NPM or Yarn
 
+### 1. Install Dependencies
+```bash
+npm install
+```
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+### 2. Environment Configuration
+Create a `.env` file in the root directory and copy the contents from `.env.example`. Make sure to fill in your appropriate variables:
+```bash
+cp .env.example .env
+```
+Ensure your Firebase configuration is properly set up in `firebase-applet-config.json` and `firebase.ts`.
+
+### 3. Start Development Server
+```bash
+npm run dev
+```
+The application will be accessible at `http://localhost:3000`.
+
+### 4. Run E2E Tests
+To verify the application flows using Playwright:
+```bash
+npx playwright install # First time only
+npm run test:e2e
+```
+
+## Converting to a Mobile App (Android & iOS)
+
+To convert this React web application into a native mobile application for Android and iOS, the most effective tool is **Capacitor**. Capacitor wraps your responsive web app in a native WebView and provides JavaScript bridges to native device features (Camera, Geolocation, Notifications, etc.).
+
+### Step 1: Install Capacitor
+
+First, install the Capacitor CLI and core packages:
+```bash
+npm install @capacitor/core
+npm install -D @capacitor/cli
+```
+
+### Step 2: Initialize Capacitor
+
+Initialize the Capacitor configuration. This creates a `capacitor.config.ts` file in your project.
+```bash
+npx cap init Aego com.aego.app --web-dir dist
+```
+*Note: Make sure the `webDir` is set to `dist` (Vite's default build output folder).*
+
+### Step 3: Build the Web App
+
+Before adding mobile platforms, compile your production web assets:
+```bash
+npm run build
+```
+
+### Step 4: Add Mobile Platforms
+
+Install the Android and iOS packages, then add the platforms to your project. 
+*(Note: iOS compilation requires a Mac with Xcode, Android requires Android Studio).*
+
+```bash
+npm install @capacitor/android @capacitor/ios
+npx cap add android
+npx cap add ios
+```
+
+### Step 5: Sync Assets
+
+Whenever you make changes to your React app and rebuild (`npm run build`), you need to sync the updated web assets into your native Android/iOS projects:
+```bash
+npx cap sync
+```
+
+### Step 6: Deploy & Run
+
+Open the projects in their respective native IDEs to build, run on simulators/physical devices, and publish to the App Store or Google Play:
+```bash
+# Open Android Studio
+npx cap open android
+
+# Open Xcode
+npx cap open ios
+```
