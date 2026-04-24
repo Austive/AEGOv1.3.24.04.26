@@ -1,0 +1,240 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{document=**} { allow read, write: if false; }
+
+    // Primitive Guards
+    function isSignedIn() { return request.auth != null; }
+    function incoming() { return request.resource.data; }
+    function existing() { return resource.data; }
+    
+    // Auth Lookups
+    function isAdmin() { 
+      return isSignedIn() && (
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
+        request.auth.token.email == "nhlakaaushlubi@gmail.com"
+      ); 
+    }
+
+    function getMyRole() {
+      return exists(/databases/$(database)/documents/users/$(request.auth.uid)) 
+        ? get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role 
+        : null;
+    }
+    
+    // Type and Range Helpers
+    function isValidId(id) { return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$'); }
+    
+    function isValidUser(data) {
+      return data.keys().hasOnly(['uid', 'email', 'displayName', 'role', 'createdAt', 'isOnline']) &&
+             data.keys().hasAll(['uid', 'email', 'displayName', 'role', 'createdAt']) &&
+             data.uid is string && data.uid.size() > 0 && data.uid.size() <= 128 &&
+             data.email is string && data.email.size() > 0 && data.email.size() <= 256 &&
+             data.displayName is string && data.displayName.size() > 0 && data.displayName.size() <= 128 &&
+             data.role in ['client', 'company', 'personnel', 'admin'] &&
+             data.createdAt is timestamp &&
+             (!('isOnline' in data) || data.isOnline is bool);
+    }
+    
+    match /users/{userId} {
+      // PII Blanket check: Admin can read all. Owner can read self.
+      // Company can strictly list personnel: handled by list rule constraints
+      allow get: if isSignedIn() && (request.auth.uid == userId || isAdmin() || (getMyRole() == 'company' && existing().role == 'personnel'));
+      
+      allow list: if isSignedIn() && (
+        isAdmin() || 
+        (getMyRole() == 'company' && existing().role == 'personnel') // Company querying where role == personnel
+      );
+      
+      allow create: if isSignedIn() && isValidId(userId) && userId == request.auth.uid &&
+                    incoming().uid == request.auth.uid &&
+                    isValidUser(incoming()) && 
+                    ((incoming().role == 'client') || isAdmin()); // Users self-register as clients only
+                    
+      allow update: if isSignedIn() && (
+        isAdmin() || 
+        (
+          request.auth.uid == userId && 
+          isValidUser(incoming()) && 
+          incoming().uid == existing().uid && 
+          incoming().createdAt == existing().createdAt &&
+          incoming().role == existing().role // Users cannot escalate privileges
+        )
+      );
+    }
+    
+    // ==================
+    // Bookings
+    // ==================
+    function isValidBookingCreate(data) {
+      return data.keys().hasOnly(['clientId', 'serviceType', 'location', 'date', 'duration', 'status', 'price', 'createdAt', 'updatedAt', 'details']) &&
+             data.keys().hasAll(['clientId', 'serviceType', 'location', 'date', 'duration', 'status', 'price', 'createdAt', 'updatedAt']) &&
+             data.clientId is string && data.clientId.size() > 0 && data.clientId.size() <= 128 &&
+             data.serviceType in ['close', 'event', 'asset'] &&
+             data.location is string && data.location.size() > 0 && data.location.size() <= 256 &&
+             data.date is string && data.date.size() > 0 && data.date.size() <= 64 &&
+             data.duration is number && data.duration > 0 &&
+             data.status == 'pending' &&
+             data.price is number && data.price >= 0 &&
+             data.createdAt == request.time &&
+             data.updatedAt == request.time &&
+             (!('details' in data) || (data.details is string && data.details.size() <= 2048));
+    }
+
+    match /bookings/{bookingId} {
+      allow get: if isSignedIn() && (
+        isAdmin() || 
+        existing().clientId == request.auth.uid || 
+        existing().assignedCompanyId == request.auth.uid || 
+        existing().assignedPersonnelId == request.auth.uid ||
+        (existing().status in ['pending', 'matching'] && getMyRole() == 'company')
+      );
+      
+      allow list: if isSignedIn() && (
+        isAdmin() || 
+        existing().clientId == request.auth.uid || 
+        existing().assignedCompanyId == request.auth.uid || 
+        existing().assignedPersonnelId == request.auth.uid ||
+        (existing().status in ['pending', 'matching'] && getMyRole() == 'company')
+      );
+      
+      allow create: if isSignedIn() && isValidId(bookingId) &&
+                    incoming().clientId == request.auth.uid &&
+                    isValidBookingCreate(incoming());
+                    
+      // Updates need strict state guards
+      allow update: if isSignedIn() && (
+        isAdmin() ||
+        (
+          incoming().clientId == existing().clientId &&
+          incoming().createdAt == existing().createdAt &&
+          incoming().serviceType == existing().serviceType &&
+          incoming().location == existing().location &&
+          incoming().date == existing().date &&
+          incoming().duration == existing().duration &&
+          incoming().price == existing().price &&
+          incoming().updatedAt == request.time &&
+          (
+            // Client cancelling
+            (request.auth.uid == existing().clientId && incoming().diff(existing()).affectedKeys().hasOnly(['status', 'updatedAt']) && existing().status in ['pending'] && incoming().status == 'cancelled') ||
+            // Client reviewing
+            (request.auth.uid == existing().clientId && incoming().diff(existing()).affectedKeys().hasOnly(['reviewed', 'updatedAt']) && existing().status == 'completed' && incoming().reviewed == true) ||
+            // Company claiming a pending job
+            (getMyRole() == 'company' && existing().status == 'pending' && incoming().diff(existing()).affectedKeys().hasOnly(['status', 'assignedCompanyId', 'updatedAt']) && incoming().status == 'assigned' && incoming().assignedCompanyId == request.auth.uid) ||
+            // Company assigning personnel
+            (getMyRole() == 'company' && existing().assignedCompanyId == request.auth.uid && incoming().diff(existing()).affectedKeys().hasOnly(['status', 'assignedPersonnelId', 'updatedAt']) && incoming().status in ['assigned', 'deployed']) || // can change status to deployed? yes
+            // Personnel updating status
+            (getMyRole() == 'personnel' && existing().assignedPersonnelId == request.auth.uid && incoming().diff(existing()).affectedKeys().hasOnly(['status', 'updatedAt']) && incoming().status in ['deployed', 'completed']) ||
+            // General Company status update (matching, etc)
+            (existing().assignedCompanyId == request.auth.uid && incoming().diff(existing()).affectedKeys().hasOnly(['status', 'updatedAt']))
+          )
+        )
+      );
+    }
+    
+    // Notifications
+    function isValidNotification(data) {
+      return data.keys().hasOnly(['userId', 'type', 'title', 'message', 'read', 'createdAt', 'bookingId', 'profileId']) &&
+             data.keys().hasAll(['userId', 'type', 'title', 'message', 'read', 'createdAt']) &&
+             data.userId is string && data.userId.size() > 0 && data.userId.size() <= 128 &&
+             data.type is string && data.type.size() > 0 && data.type.size() <= 64 &&
+             data.title is string && data.title.size() > 0 && data.title.size() <= 256 &&
+             data.message is string && data.message.size() > 0 && data.message.size() <= 1024 &&
+             data.read is bool &&
+             data.createdAt == request.time;
+    }
+    
+    match /notifications/{notifId} {
+      allow get, list: if isSignedIn() && (existing().userId == request.auth.uid || (isAdmin() && existing().userId == 'admin'));
+      allow create: if isSignedIn() && isValidId(notifId) && isValidNotification(incoming()); // Anyone can generate
+      allow update: if isSignedIn() && (
+        isAdmin() || 
+        (existing().userId == request.auth.uid && incoming().diff(existing()).affectedKeys().hasOnly(['read']) && incoming().read == true)
+      );
+      allow delete: if isAdmin();
+    }
+    
+    // Messages
+    function isValidMessage(data) {
+      return data.keys().hasOnly(['bookingId', 'senderId', 'senderRole', 'text', 'createdAt']) &&
+             data.keys().hasAll(['bookingId', 'senderId', 'senderRole', 'text', 'createdAt']) &&
+             data.bookingId is string && data.bookingId.size() > 0 && data.bookingId.size() <= 128 &&
+             data.senderId is string && data.senderId.size() > 0 && data.senderId.size() <= 128 &&
+             data.senderRole is string && data.senderRole.size() > 0 && data.senderRole.size() <= 64 &&
+             data.text is string && data.text.size() > 0 && data.text.size() <= 2048 &&
+             data.createdAt == request.time;
+    }
+    
+    match /messages/{messageId} {
+      allow get, list: if isSignedIn() && (
+        isAdmin() ||
+        exists(/databases/$(database)/documents/bookings/$(existing().bookingId)) && (
+          get(/databases/$(database)/documents/bookings/$(existing().bookingId)).data.clientId == request.auth.uid ||
+          get(/databases/$(database)/documents/bookings/$(existing().bookingId)).data.assignedCompanyId == request.auth.uid ||
+          get(/databases/$(database)/documents/bookings/$(existing().bookingId)).data.assignedPersonnelId == request.auth.uid
+        )
+      );
+      // Wait, lists should strictly filter by finding the booking data.
+      
+      allow create: if isSignedIn() && isValidId(messageId) && isValidMessage(incoming()) && incoming().senderId == request.auth.uid &&
+        exists(/databases/$(database)/documents/bookings/$(incoming().bookingId)) && (
+          get(/databases/$(database)/documents/bookings/$(incoming().bookingId)).data.clientId == request.auth.uid ||
+          get(/databases/$(database)/documents/bookings/$(incoming().bookingId)).data.assignedCompanyId == request.auth.uid ||
+          get(/databases/$(database)/documents/bookings/$(incoming().bookingId)).data.assignedPersonnelId == request.auth.uid ||
+          isAdmin()
+        );
+    }
+    
+    // Reviews
+    function isValidReview(data) {
+      return data.keys().hasOnly(['bookingId', 'companyId', 'clientId', 'rating', 'comment', 'createdAt']) &&
+             data.keys().hasAll(['bookingId', 'companyId', 'clientId', 'rating', 'createdAt']) &&
+             data.bookingId is string && data.bookingId.size() > 0 && data.bookingId.size() <= 128 &&
+             data.companyId is string && data.companyId.size() > 0 && data.companyId.size() <= 128 &&
+             data.clientId is string && data.clientId.size() > 0 && data.clientId.size() <= 128 &&
+             data.rating is number && data.rating >= 1 && data.rating <= 5 &&
+             (!('comment' in data) || (data.comment is string && data.comment.size() <= 2048)) &&
+             data.createdAt == request.time;
+    }
+    
+    match /reviews/{reviewId} {
+      allow read: if true; // Public or is it authenticated? Let's say all.
+      allow create: if isSignedIn() && isValidId(reviewId) && isValidReview(incoming()) && incoming().clientId == request.auth.uid &&
+        exists(/databases/$(database)/documents/bookings/$(incoming().bookingId)) &&
+        get(/databases/$(database)/documents/bookings/$(incoming().bookingId)).data.clientId == request.auth.uid &&
+        get(/databases/$(database)/documents/bookings/$(incoming().bookingId)).data.status == 'completed';
+    }
+
+    // Company Profiles
+    function isValidCompanyProfile(data) {
+      return data.keys().hasOnly(['companyId', 'services', 'teamSize', 'specializations', 'rating', 'reviewCount', 'responseTime', 'status']) &&
+             data.keys().hasAll(['companyId', 'services', 'teamSize', 'specializations', 'rating', 'reviewCount']) &&
+             data.companyId is string && data.companyId.size() > 0 && data.companyId.size() <= 128 &&
+             data.services is list && data.services.size() <= 10 &&
+             data.teamSize is number && data.teamSize >= 0 &&
+             data.specializations is list && data.specializations.size() <= 10 &&
+             data.rating is number && data.rating >= 0 && data.rating <= 5 &&
+             data.reviewCount is number && data.reviewCount >= 0 &&
+             (!('status' in data) || data.status is string) &&
+             (!('responseTime' in data) || (data.responseTime is number && data.responseTime >= 0));
+    }
+    
+    match /company_profiles/{profileId} {
+      allow read: if isSignedIn(); // Displayed to everyone who logs in
+      allow create: if isSignedIn() && isValidId(profileId) && incoming().companyId == request.auth.uid && isValidCompanyProfile(incoming());
+      allow update: if isSignedIn() && (
+        isAdmin() || 
+        (existing().companyId == request.auth.uid && incoming().companyId == existing().companyId && isValidCompanyProfile(incoming()))
+      );
+    }
+    
+    match /partner_applications/{appId} {
+      // Just keep basic blocks
+      allow read: if isSignedIn() && (isAdmin() || existing().userId == request.auth.uid);
+      allow create: if isSignedIn() && incoming().userId == request.auth.uid;
+      allow update, delete: if isAdmin();
+    }
+
+  }
+}

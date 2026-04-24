@@ -1,0 +1,7 @@
+{
+  "name": "Aego v1.2.24.4.26",
+  "description": "E-hailing platform for low-cost, short-term security solutions in Durban, South Africa.",
+  "requestFramePermissions": [
+    "geolocation"
+  ]
+}

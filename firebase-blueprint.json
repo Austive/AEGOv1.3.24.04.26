@@ -1,0 +1,222 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "A user of the Aego platform, which can be a client, security company, security personnel, or admin.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "description": "The unique identifier for the user."
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "description": "The user's email address."
+        },
+        "displayName": {
+          "type": "string",
+          "description": "The user's full name or company name."
+        },
+        "role": {
+          "type": "string",
+          "enum": ["client", "company", "personnel", "admin"],
+          "description": "The role of the user."
+        },
+        "createdAt": {
+          "type": "timestamp",
+          "description": "The time the user was created."
+        }
+      },
+      "required": ["uid", "email", "displayName", "role", "createdAt"]
+    },
+    "CompanyProfile": {
+      "title": "Company Profile",
+      "description": "Detailed profile for a security company.",
+      "type": "object",
+      "properties": {
+        "companyId": {
+          "type": "string",
+          "description": "The UID of the company user."
+        },
+        "services": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "List of services offered."
+        },
+        "teamSize": {
+          "type": "number",
+          "description": "Number of personnel in the company."
+        },
+        "specializations": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Areas of specialization."
+        },
+        "rating": {
+          "type": "number",
+          "description": "Average rating."
+        },
+        "reviewCount": {
+          "type": "number",
+          "description": "Total number of reviews."
+        },
+        "responseTime": {
+          "type": "number",
+          "description": "Average response time in minutes."
+        }
+      },
+      "required": ["companyId", "services", "teamSize", "specializations", "rating", "reviewCount"]
+    },
+    "Review": {
+      "title": "Review",
+      "description": "A review left by a client for a completed booking.",
+      "type": "object",
+      "properties": {
+        "bookingId": {
+          "type": "string",
+          "description": "The ID of the booking."
+        },
+        "companyId": {
+          "type": "string",
+          "description": "The UID of the company being reviewed."
+        },
+        "clientId": {
+          "type": "string",
+          "description": "The UID of the client leaving the review."
+        },
+        "rating": {
+          "type": "number",
+          "description": "Rating out of 5."
+        },
+        "comment": {
+          "type": "string",
+          "description": "Review comment."
+        },
+        "createdAt": {
+          "type": "timestamp",
+          "description": "When the review was created."
+        }
+      },
+      "required": ["bookingId", "companyId", "clientId", "rating", "createdAt"]
+    },
+    "Booking": {
+      "title": "Booking",
+      "description": "A security service booking request.",
+      "type": "object",
+      "properties": {
+        "clientId": {
+          "type": "string",
+          "description": "The UID of the client who made the booking."
+        },
+        "serviceType": {
+          "type": "string",
+          "enum": ["close", "event", "asset"],
+          "description": "The type of security service requested."
+        },
+        "location": {
+          "type": "string",
+          "description": "The location for the service."
+        },
+        "date": {
+          "type": "string",
+          "description": "The date of the service."
+        },
+        "duration": {
+          "type": "number",
+          "description": "The duration of the service in hours."
+        },
+        "details": {
+          "type": "string",
+          "description": "Additional details for the security service."
+        },
+        "status": {
+          "type": "string",
+          "enum": ["pending", "matching", "payment_pending", "assigned", "deployed", "completed", "cancelled"],
+          "description": "The current status of the booking."
+        },
+        "assignedCompanyId": {
+          "type": "string",
+          "description": "The UID of the security company assigned to this booking."
+        },
+        "assignedPersonnelId": {
+          "type": "string",
+          "description": "The UID of the security personnel assigned to this booking."
+        },
+        "price": {
+          "type": "number",
+          "description": "The total price for the booking."
+        },
+        "createdAt": {
+          "type": "timestamp",
+          "description": "The time the booking was created."
+        },
+        "updatedAt": {
+          "type": "timestamp",
+          "description": "The time the booking was last updated."
+        }
+      },
+      "required": ["clientId", "serviceType", "location", "date", "duration", "status", "price", "createdAt", "updatedAt"]
+    },
+    "Message": {
+      "title": "Message",
+      "description": "A chat message within a booking.",
+      "type": "object",
+      "properties": {
+        "bookingId": {
+          "type": "string",
+          "description": "The ID of the booking this message belongs to."
+        },
+        "senderId": {
+          "type": "string",
+          "description": "The UID of the user who sent the message."
+        },
+        "senderRole": {
+          "type": "string",
+          "description": "The role of the sender."
+        },
+        "text": {
+          "type": "string",
+          "description": "The message content."
+        },
+        "createdAt": {
+          "type": "timestamp",
+          "description": "The time the message was sent."
+        }
+      },
+      "required": ["bookingId", "senderId", "senderRole", "text", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": {
+        "$ref": "#/entities/User"
+      },
+      "description": "Collection of users."
+    },
+    "/company_profiles/{profileId}": {
+      "schema": {
+        "$ref": "#/entities/CompanyProfile"
+      },
+      "description": "Collection of company profiles."
+    },
+    "/reviews/{reviewId}": {
+      "schema": {
+        "$ref": "#/entities/Review"
+      },
+      "description": "Collection of reviews."
+    },
+    "/bookings/{bookingId}": {
+      "schema": {
+        "$ref": "#/entities/Booking"
+      },
+      "description": "Collection of security bookings."
+    },
+    "/messages/{messageId}": {
+      "schema": {
+        "$ref": "#/entities/Message"
+      },
+      "description": "Collection of chat messages for active bookings."
+    }
+  }
+}
