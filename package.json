@@ -22,8 +22,6 @@
     "ios:prepare": "npx cap add ios || true",
     "ios:sync": "npx cap sync ios",
 
-    /* -------- GENERIC CAPACITOR COMMANDS -------- */
-
     "cap:sync": "npx cap sync",
     "cap:add:android": "npx cap add android",
     "cap:add:ios": "npx cap add ios",
