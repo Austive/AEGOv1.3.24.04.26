@@ -11,12 +11,10 @@
     "start": "node server.ts",
     "lint": "tsc --noEmit",
     "test:e2e": "playwright test",
-    "build:mobile": "npm run build && npx cap sync",
+    "build:mobile": "npm run build",
     "cap:sync": "npx cap sync",
     "cap:add:android": "npx cap add android",
-    "cap:add:ios": "npx cap add ios",
-    "cap:open:android": "npx cap open android",
-    "cap:open:ios": "npx cap open ios"
+    "cap:open:android": "npx cap open android"
   },
   "dependencies": {
     "@capacitor/core": "^6.1.0",
