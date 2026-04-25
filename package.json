@@ -10,7 +10,11 @@
     "clean": "rm -rf dist",
     "start": "node server.ts",
     "lint": "tsc --noEmit",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "mobile:build": "npm run build && npx cap sync android",
+    "android:sync": "npx cap sync android",
+    "android:open": "npx cap open android",
+    "android:build": "cd android && ./gradlew assembleDebug"
   },
   "dependencies": {
     "@capacitor/android": "^8.3.1",
