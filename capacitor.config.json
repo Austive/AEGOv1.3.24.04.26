@@ -1,0 +1,13 @@
+{
+  "appId": "com.aego.app",
+  "appName": "Aego",
+  "webDir": "dist",
+  "server": {
+    "androidScheme": "https"
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 0
+    }
+  }
+}
