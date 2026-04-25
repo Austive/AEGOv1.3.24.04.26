@@ -5,20 +5,32 @@
   "type": "module",
   "scripts": {
     "dev": "tsx server.ts",
+    "start": "node server.ts",
+
     "build": "vite build",
     "preview": "vite preview",
     "clean": "rm -rf dist",
-    "start": "node server.ts",
+
     "lint": "tsc --noEmit",
     "test:e2e": "playwright test",
 
-    "build:mobile": "npm run build && npm run mobile:prepare && npm run mobile:sync",
-    "mobile:prepare": "npx cap add android || true",
-    "mobile:sync": "npx cap sync android",
+    /* -------- MOBILE PIPELINES (SEPARATED) -------- */
+
+    "build:android": "npm run build && npm run android:prepare && npm run android:sync",
+    "android:prepare": "npx cap add android || true",
+    "android:sync": "npx cap sync android",
+
+    "build:ios": "npm run build && npm run ios:prepare && npm run ios:sync",
+    "ios:prepare": "npx cap add ios || true",
+    "ios:sync": "npx cap sync ios",
+
+    /* -------- GENERIC CAPACITOR COMMANDS -------- */
 
     "cap:sync": "npx cap sync",
     "cap:add:android": "npx cap add android",
-    "cap:open:android": "npx cap open android"
+    "cap:add:ios": "npx cap add ios",
+    "cap:open:android": "npx cap open android",
+    "cap:open:ios": "npx cap open ios"
   },
   "dependencies": {
     "@capacitor/core": "^6.1.0",
