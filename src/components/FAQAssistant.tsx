@@ -4,8 +4,8 @@ import { motion, AnimatePresence } from 'motion/react';
 import { GoogleGenAI } from '@google/genai';
 
 // Check if API key is configured
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-const isAssistantAvailable = !!GEMINI_API_KEY && GEMINI_API_KEY !== 'MY_GEMINI_API_KEY';
+const GEMINI_API_KEY = 'AQ.Ab8RN6KPI_HfK6F6PDBQKSOD0PG8y86zIo7KZXPP42XwrPoGAw';
+const isAssistantAvailable = !!GEMINI_API_KEY && GEMINI_API_KEY !== 'AQ.Ab8RN6KPI_HfK6F6PDBQKSOD0PG8y86zIo7KZXPP42XwrPoGAw';
 
 // Initialize Gemini API only if key is available
 let ai: any = null;
