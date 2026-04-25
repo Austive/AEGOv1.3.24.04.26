@@ -14,8 +14,6 @@
     "lint": "tsc --noEmit",
     "test:e2e": "playwright test",
 
-    /* -------- MOBILE PIPELINES (SEPARATED) -------- */
-
     "build:android": "npm run build && npm run android:prepare && npm run android:sync",
     "android:prepare": "npx cap add android || true",
     "android:sync": "npx cap sync android",
