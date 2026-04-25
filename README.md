@@ -1,4 +1,5 @@
 # Aego Platform
+fir
 
 Aego is an innovative e-hailing platform designed for low-cost, short-term security solutions in Durban, South Africa. It connects clients who need temporary security (close protection, event security, asset protection) with vetted security companies and personnel.
 
@@ -110,7 +111,7 @@ Install the Android and iOS packages, then add the platforms to your project.
 *(Note: iOS compilation requires a Mac with Xcode, Android requires Android Studio).*
 
 ```bash
-npm install @capacitor/android @capacitor/ios
+npm npxinstall @capacitor/android @capacitor/ios
 npx cap add android
 npx cap add ios
 ```

@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Aego</string>
+    <string name="title_activity_main">Aego</string>
+    <string name="package_name">com.aego.app</string>
+    <string name="custom_url_scheme">com.aego.app</string>
+</resources>
