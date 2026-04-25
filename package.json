@@ -11,7 +11,11 @@
     "start": "node server.ts",
     "lint": "tsc --noEmit",
     "test:e2e": "playwright test",
-    "build:mobile": "npm run build",
+
+    "build:mobile": "npm run build && npm run mobile:prepare && npm run mobile:sync",
+    "mobile:prepare": "npx cap add android || true",
+    "mobile:sync": "npx cap sync android",
+
     "cap:sync": "npx cap sync",
     "cap:add:android": "npx cap add android",
     "cap:open:android": "npx cap open android"
