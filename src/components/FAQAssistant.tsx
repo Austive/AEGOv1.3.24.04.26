@@ -1,10 +1,21 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { MessageCircle, X, Send, Loader2 } from 'lucide-react';
+import { MessageCircle, X, Send, Loader2, AlertCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { GoogleGenAI } from '@google/genai';
 
-// Initialize Gemini API
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+// Check if API key is configured
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+const isAssistantAvailable = !!GEMINI_API_KEY && GEMINI_API_KEY !== 'MY_GEMINI_API_KEY';
+
+// Initialize Gemini API only if key is available
+let ai: any = null;
+if (isAssistantAvailable) {
+  try {
+    ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
+  } catch (error) {
+    console.warn('Failed to initialize Gemini AI:', error);
+  }
+}
 
 export default function FAQAssistant() {
   const [isOpen, setIsOpen] = useState(false);
@@ -26,6 +37,15 @@ export default function FAQAssistant() {
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!input.trim()) return;
+
+    // Check if API is available
+    if (!isAssistantAvailable || !ai) {
+      setMessages(prev => [...prev, { 
+        role: 'model', 
+        text: '⚠️ Assistant is currently disabled. Please configure your Gemini API key in the .env file.' 
+      }]);
+      return;
+    }
 
     const userMsg = input.trim();
     setInput('');
@@ -61,6 +81,14 @@ export default function FAQAssistant() {
       setIsLoading(false);
     }
   };
+
+  // Don't render assistant button if API key is not configured
+  if (!isAssistantAvailable) {
+    if (process.env.NODE_ENV === 'development') {
+      console.warn('⚠️ Gemini API key is not configured. Set GEMINI_API_KEY in .env file to enable the assistant.');
+    }
+    return null;
+  }
 
   return (
     <>
